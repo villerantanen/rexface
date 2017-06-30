@@ -93,16 +93,7 @@ def train_rex():
         return make_response("Name for image missing")
     FACES=read_dump()
     image=scipy.misc.imread(submitted_file, mode='RGB')
-    size_limit=2500
-    if (min(image.shape[0],image.shape[1])>size_limit):
-        aspect_ratio = float(image.shape[0])/float(image.shape[1])                   
-        if image.shape[0]>image.shape[1]:
-            new_height = size_limit
-            new_width = int(new_height/aspect_ratio)
-        else:
-            new_width = size_limit
-            new_height = int(aspect_ratio*new_width)
-        image = skimage.transform.resize(image, (new_width,new_height))
+    image=resize(image, 1500)
 
     new_encoding,message,new_hash=scan_known_people(submitted_name,image,FACES['hashes'])
     if new_hash:
@@ -144,16 +135,7 @@ def get_match():
         FACES=read_dump()
         LAST_UPDATE=time.time()
     image=scipy.misc.imread(submitted_file, mode='RGB')
-    size_limit=2000
-    if (min(image.shape[0],image.shape[1])>size_limit):
-        aspect_ratio = float(image.shape[0])/float(image.shape[1])                   
-        if image.shape[0]>image.shape[1]:
-            new_height = size_limit
-            new_width = int(new_height/aspect_ratio)
-        else:
-            new_width = size_limit
-            new_height = int(aspect_ratio*new_width)
-        image = skimage.transform.resize(image, (new_width,new_height))
+    image=resize(image, 1000)
     
     matches=find_match(image, FACES['names'], FACES['encodings'])
     if len(matches)==0:
@@ -164,6 +146,20 @@ def get_match():
             response_text.append("%s,%f"%( match[0], match[1]))
         response_text="\n".join(response_text)
     return response_text
+
+def resize(image,size_limit):
+    if (min(image.shape[0],image.shape[1])>size_limit):
+        aspect_ratio = float(image.shape[0])/float(image.shape[1])                   
+        if image.shape[0]>image.shape[1]:
+            new_height = size_limit
+            new_width = int(new_height/aspect_ratio)
+        else:
+            new_width = size_limit
+            new_height = int(aspect_ratio*new_width)
+        image = skimage.transform.resize(image, (new_height,new_width))
+        image = (255*image).astype('uint8')
+
+    return image
 
 
 def scan_known_people(name,img,existing_hashes=[]):
@@ -181,13 +177,15 @@ def scan_known_people(name,img,existing_hashes=[]):
     return encodings[0],message,img_hash
 
 
-
 def send_image(image):
     byte_io = BytesIO()
     skimage.io.imsave(byte_io, image, plugin='pil', format_str='png')
     byte_io.seek(0)
     return send_file(byte_io, mimetype='image/png')
 
+def printo(s):
+    sys.stdout.write(str(s)+"\n")
+    sys.stdout.flush()
 
 
 if __name__ == '__main__':   
