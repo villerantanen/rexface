@@ -1,0 +1,10 @@
+#!/bin/bash
+[[ -z "$1" ]]  && {
+  img=$( readlink -f ~/Syncthing/Reaktor/Pictures/Photos/Rantanen_Ville_02_draft.jpg )
+} || {
+  img=$( readlink -f "$1" )
+}
+convert -resize 1536x "$img" /tmp/match.jpg
+curl -F file=@/tmp/match.jpg http://0.0.0.0:8167/rex
+printf "\n\n"
+rm -f /tmp/match.jpg

@@ -1,0 +1,12 @@
+#!/bin/bash
+img="$2"
+name="$1"
+
+[[ -f "$img" ]] || {
+    echo no such image
+    exit 1
+}
+
+curl -F file=@$img -F name=$name http://0.0.0.0:8167/train
+printf "\n\n"
+

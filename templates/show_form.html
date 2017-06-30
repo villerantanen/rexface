@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+{% block body %}
+  <div>
+  <form method="post" action="{{ url_for('show_index') }}" enctype="multipart/form-data">
+      Upload image: <br>
+      <input type=file name=file>
+      <input type=submit value=Upload>
+  </form>
+
+  </div>
+  <div id="imageArea">
+  <img id="skelledImage" src=""/>
+  {{ image|safe }}
+  </div>
+
+{% endblock %}

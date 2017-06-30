@@ -1,0 +1,9 @@
+version: '2'
+services:
+  face:
+    build: .
+    ports:
+     - '8167:8167'
+     - '80:80'
+    volumes:
+     - .:/code
