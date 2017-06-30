@@ -19,10 +19,9 @@ app.config.from_object(__name__)
 DUMP_FILE='encodings.pickle'
 def read_dump():
     if not os.path.exists(DUMP_FILE):
-        FACES={'names':[],'encodings':[],'hashes':[],'time':int(time.time())}
+        FACES={'names':[],'encodings':[],'hashes':[]}
     with open(DUMP_FILE,'rb') as fp:
         FACES=pickle.load(fp)
-    FACES['time']=int(time.time())
     return FACES
 
 def write_dump(FACES):
@@ -30,6 +29,7 @@ def write_dump(FACES):
         pickle.dump(FACES,fp)
     return
 FACES=read_dump()
+LAST_UPDATE=int(time.time())
 
 @app.before_request
 def before_request():
@@ -80,12 +80,13 @@ def show_rex():
 
 @app.route('/train',methods=['POST'])
 def train_rex():
+    global FACES
     submitted_file = request.files['file']
     submitted_name = request.form['name']
     if not submitted_file:
-        return
+        return make_response("Image file missing")
     if not submitted_name:
-        return
+        return make_response("Name for image missing")
     FACES=read_dump()
     image=scipy.misc.imread(submitted_file, mode='RGB')
     size_limit=2500
@@ -104,7 +105,7 @@ def train_rex():
         FACES['names'].append(submitted_name)
         FACES['encodings'].append(new_encoding)
         FACES['hashes'].append(new_hash)
-        FACES['time']=int(time.time())
+        LAST_UPDATE=int(time.time())
         write_dump(FACES)
 
     response=make_response(message)
@@ -128,12 +129,16 @@ def find_match(test_image, names, encodings):
     return matches
 
 def get_match():
+    global LAST_UPDATE
+    global FACES
     submitted_file = request.files['file']
     if not submitted_file:
         return "No file submitted"
     # reread dump if old
-    if int(time.time())-3600 > FACES['time']:
+    if int(time.time())-3600 > LAST_UPDATE:
+        print("Reread dump")
         FACES=read_dump()
+        LAST_UPDATE=time.time()
     image=scipy.misc.imread(submitted_file, mode='RGB')
     size_limit=2000
     if (min(image.shape[0],image.shape[1])>size_limit):
