@@ -19,7 +19,7 @@ app.config.from_object(__name__)
 DUMP_FILE='encodings.pickle'
 def read_dump():
     if not os.path.exists(DUMP_FILE):
-        FACES={'names':[],'encodings':[],'hashes':[]}
+        FACES={'names':[],'encodings':[],'hashes':[],'time':int(time.time())}
     with open(DUMP_FILE,'rb') as fp:
         FACES=pickle.load(fp)
     return FACES
@@ -55,6 +55,11 @@ def download_model():
     response=send_from_directory('.',DUMP_FILE)
     return response
 
+@app.route('/read',methods=['GET'])
+def read_model():
+    FACES=read_dump()
+    return make_response("ok")
+
 @app.route('/match',methods=['POST'])
 def show_match():
     response_text=get_match()
@@ -80,7 +85,7 @@ def train_rex():
         return
     if not submitted_name:
         return
-
+    FACES=read_dump()
     image=scipy.misc.imread(submitted_file, mode='RGB')
     size_limit=2500
     if (min(image.shape[0],image.shape[1])>size_limit):
@@ -98,6 +103,7 @@ def train_rex():
         FACES['names'].append(submitted_name)
         FACES['encodings'].append(new_encoding)
         FACES['hashes'].append(new_hash)
+        FACES['time']=int(time.time())
         write_dump(FACES)
 
     response=make_response(message)
@@ -135,7 +141,7 @@ def get_match():
             new_width = size_limit
             new_height = int(aspect_ratio*new_width)
         image = skimage.transform.resize(image, (new_width,new_height))
-    return str(image.dtype)
+    
     matches=find_match(image, FACES['names'], FACES['encodings'])
     if len(matches)==0:
         response_text="noface,1"
