@@ -22,6 +22,7 @@ def read_dump():
         FACES={'names':[],'encodings':[],'hashes':[],'time':int(time.time())}
     with open(DUMP_FILE,'rb') as fp:
         FACES=pickle.load(fp)
+    FACES['time']=int(time.time())
     return FACES
 
 def write_dump(FACES):
@@ -130,6 +131,9 @@ def get_match():
     submitted_file = request.files['file']
     if not submitted_file:
         return "No file submitted"
+    # reread dump if old
+    if int(time.time())-3600 > FACES['time']:
+        FACES=read_dump()
     image=scipy.misc.imread(submitted_file, mode='RGB')
     size_limit=2000
     if (min(image.shape[0],image.shape[1])>size_limit):
