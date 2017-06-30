@@ -45,6 +45,10 @@ def show_index():
         submitted_file = request.files['file']
         if submitted_file:
             response_text=get_match()
+            names="\n".join(
+                ['<a href=http://rex.reaktor.com/people/%s>%s</a><br>'%(row.split(",")[0],row) for row in str(response_text).split("\n")]
+            ) 
+            response_text=names
 
     return render_template('show_form.html',
                 image=response_text)
