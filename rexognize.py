@@ -8,6 +8,7 @@ import skimage, skimage.transform, skimage.io, skimage.color
 import scipy.misc
 import pickle
 from io import BytesIO
+from PIL import Image
 import numpy as np
 import face_recognition.api as face_recognition
 import sys
@@ -94,6 +95,7 @@ def train_rex():
     FACES=read_dump()
     image=scipy.misc.imread(submitted_file, mode='RGB')
     image=resize(image, 1500)
+    image=fix_orientation(image)
 
     new_encoding,message,new_hash=scan_known_people(submitted_name,image,FACES['hashes'])
     if new_hash:
@@ -109,8 +111,14 @@ def train_rex():
 
 
 def compute_distances(image_to_check, known_face_encodings):
-    unknown_encodings = face_recognition.face_encodings(image_to_check)
-    
+    unknown_encodings = face_recognition.face_encodings(image_to_check,num_jitters=1)
+    #skimage.io.imsave(open('try0.png','wb'), image_to_check, plugin='pil', format_str='png')
+    if len(unknown_encodings)==0:
+        rotated=skimage.transform.rotate(image_to_check,90,resize=True)
+        unknown_encodings = face_recognition.face_encodings(rotated,num_jitters=3)
+    if len(unknown_encodings)==0:
+        rotated=skimage.transform.rotate(image_to_check,-90,resize=True)
+        unknown_encodings = face_recognition.face_encodings(rotated,num_jitters=3)
     return [list(face_recognition.face_distance(known_face_encodings, unknown_encoding)) for unknown_encoding in unknown_encodings]
 
 def find_match(test_image, names, encodings):
@@ -123,6 +131,28 @@ def find_match(test_image, names, encodings):
         matches.append((names[match_index],match_distance))
     return matches
 
+def fix_orientation(img):
+    EXIF_ORIENTATION_TAG=274
+    ORIENTATIONS = {
+	1: ("Normal", 0),
+	2: ("Mirrored left-to-right", 0),
+	3: ("Rotated 180 degrees", 180),
+	4: ("Mirrored top-to-bottom", 0),
+	5: ("Mirrored along top-left diagonal", 0),
+	6: ("Rotated 90 degrees", -90),
+	7: ("Mirrored along top-right diagonal", 0),
+	8: ("Rotated 270 degrees", -270)
+    }
+    try:
+        orientation = img._getexif()[EXIF_ORIENTATION_TAG]
+    except:
+        return img
+    if orientation in [3,6,8]:
+        degrees = ORIENTATIONS[orientation][1]
+        img = img.rotate(degrees,expand=1)
+        return img
+    return img
+
 def get_match():
     global LAST_UPDATE
     global FACES
@@ -134,8 +164,10 @@ def get_match():
         print("Reread dump")
         FACES=read_dump()
         LAST_UPDATE=time.time()
-    image=scipy.misc.imread(submitted_file, mode='RGB')
-    image=resize(image, 1000)
+    #image=scipy.misc.imread(submitted_file, mode='RGB')
+    image=Image.open(submitted_file.stream)
+    image=np.array(fix_orientation(image))
+    image=resize(image, 1500)
     
     matches=find_match(image, FACES['names'], FACES['encodings'])
     if len(matches)==0:
@@ -148,7 +180,7 @@ def get_match():
     return response_text
 
 def resize(image,size_limit):
-    if (min(image.shape[0],image.shape[1])>size_limit):
+    if (max(image.shape[0],image.shape[1])>size_limit):
         aspect_ratio = float(image.shape[0])/float(image.shape[1])                   
         if image.shape[0]>image.shape[1]:
             new_height = size_limit
@@ -167,7 +199,7 @@ def scan_known_people(name,img,existing_hashes=[]):
     img_hash=hash(tuple(img.reshape(-1)))
     if img_hash in existing_hashes:
         return False,"Image aready scanned",False
-    encodings = face_recognition.face_encodings(img)
+    encodings = face_recognition.face_encodings(img, num_jitters=5)
     message="Trained"
     if len(encodings) > 1:
         message="WARNING: More than one face found. Only considering the first face."

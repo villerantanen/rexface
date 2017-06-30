@@ -8,7 +8,7 @@ RUN cd /tmp && pip3 install setuptools && \
   cmake .. -DDLIB_USE_CUDA=0 -DUSE_AVX_INSTRUCTIONS=1 && cmake --build . && \
   cd .. && \
   python3 setup.py install --yes USE_AVX_INSTRUCTIONS --no DLIB_USE_CUDA
-RUN pip3 install face_recognition flask scikit-image gunicorn
+RUN pip3 install face_recognition flask scikit-image gunicorn 
 ADD . /code
 WORKDIR /code
 EXPOSE 80
